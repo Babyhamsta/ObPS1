@@ -1,4 +1,5 @@
-$obfuscatedScript = Get-Content -Path "C:/Users/User/Desktop/OrignialScript.ps1" -Raw
+
+$obfuscatedScript = Get-Content -Path "C://PATH//test.ps1" -Raw
 
 function Obfuscate-Vars ([string]$script) {
   $variablePattern = '\$([a-zA-Z0-9_]+)'
@@ -40,7 +41,7 @@ function Obfuscate-StringsToBytes ([string]$script) {
 
 
 function Obfuscate-Functions ([string]$script) {
-  $functionPattern = 'function ([a-zA-Z0-9_]+)'
+  $functionPattern = '(?i)function ([a-zA-Z0-9_]+)'
   $foundFunctions = [regex]::Matches($script,$functionPattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 
   $foundFunctions | ForEach-Object {
@@ -67,37 +68,91 @@ function Obfuscate-Commands ([string]$script) {
   return $script
 }
 
-function Add-RandomJunk {
+function Generate-RandomJunk {
+    $junkSnippets = @("`$a1B2c = 1", "`$D3e_4 = 'txt'", "`$varF5G6 = `$null", "`$H7_I8J = 0", "`$K9_L0 = 2 + 2", "`$C2_D3 = 'x' * 2", "`$E4f5 = 3 - 1", "`$G6_H7 = 3 / 1", "`$I8j9 = 4 % 3", "`$M2n3 = 'rnd'", "`$O4_P5 = 2 -eq 2", "`$Q6r7 = 'a' -ne 'b'", "`$S8_T9 = 1 -lt 2", "`$Y4z5 = 1..2", "`$C8d9 = `$false -or `$true", "`$E0_F1 = -not `$false", "`$G2h3 = [math]::Pi", "`$I4_J5 = [math]::E", "`$K6l7 = [math]::Sqrt(1)", "`$O0p1 = [math]::Cos(1)", "`$Q2_R3 = [math]::Tan(1)", "`$S4t5 = [math]::Asin(1)", "`$U6_V7 = [math]::Pow(1,2)", "`$W8x9 = [math]::Log(2)", "`$Y0_Z1 = [math]::Abs(-1)", "`$A2b3 = [math]::Sign(1)", "`$C4_D5 = [math]::Round(1)", "`$newString = 'randomString'", "`$anotherString = 'moreRandom'")
+    return $junkSnippets | Get-Random
+}
+
+function Add-JunkFunctions {
   param(
     [string]$script,
-    [int]$junkLevel
+    [int]$functionCount
   )
-
-  $junkSnippets = @("`$a1B2c = 1","`$D3e_4 = 'txt'","$varF5G6 = $null","`$H7_I8J = 0","`$K9_L0 = 2 + 2","if(`$A1b){}","`$C2_D3 = 'x' * 2","`$E4f5 = 3 - 1","`$G6_H7 = 3 / 1","`$I8j9 = 4 % 3","if(`$K0_L1){}","`$M2n3 = 'rnd'","`$O4_P5 = 2 -eq 2","`$Q6r7 = 'a' -ne 'b'","`$S8_T9 = 1 -lt 2","if(`$U0v1){}","`$Y4z5 = 1..2","$A6_B7 = $true -and `$false","$C8d9 = $false -or `$true","$E0_F1 = -not $false","`$G2h3 = [math]::Pi","`$I4_J5 = [math]::E","`$K6l7 = [math]::Sqrt(1)","if(`$M8_N9){}","`$O0p1 = [math]::Cos(1)","`$Q2_R3 = [math]::Tan(1)","`$S4t5 = [math]::Asin(1)","`$U6_V7 = [math]::Pow(1,2)","`$W8x9 = [math]::Log(2)","`$Y0_Z1 = [math]::Abs(-1)","`$A2b3 = [math]::Sign(1)","`$C4_D5 = [math]::Round(1)","`$G8_H9 = [System.Guid]::NewGuid()","`$I0j1 = Get-Random","`$K2_L3 = Get-Date","`$M4n5 = Get-Process","`$O6_P7 = Get-Host","`$Q8r9 = Get-Command","`$S0_T1 = Get-Alias","`$U2v3 = Get-PSDrive","`$W4_X5 = Get-PSProvider","`$Y6z7 = Get-Module","`$A8_B9 = Get-Service","`$C0d1 = Get-WmiObject","`$E2_F3 = Get-CimInstance","`$G4h5 = Get-Item","`$I6_J7 = Get-ChildItem","`$K8l9 = Get-Content","`$M0_N1 = Set-Content","`$O2p3 = Add-Content","`$Q4_R5 = Clear-Content","`$S6t7 = Get-Location","`$U8_V9 = Set-Location","`$W0x1 = Remove-Item","`$Y2_Z3 = Move-Item","`$A4b5 = Copy-Item","`$C6_D7 = New-Item","$E8f9 = Write-Host '$randomTxt'","$G0_H1 = Write-Output '$randOut'","`$aB1C2_D3 = 1 + 1 - (3 % 2)","iex -Verbose -Debug 'whoami' -ErrorVariable `$rndmE1 -WarningAction SilentlyContinue","`$eF2_G3H = [math]::Sqrt(16) * [math]::Pi","Get-Date -UFormat '%Y-%m-%d' | Out-Null","Get-Process | Select-Object -First 1 | Out-String","Get-Host | Get-Member -MemberType Property","`$pQ8_R9 = Get-Random -Minimum 5 -Maximum 100","`$sT0_U1 = 'string1','string2' -join ','","$vW2_X3Y = if ($true) { 'true' } else { 'false' }","Get-Culture | Select-Object -Property DisplayName","`$zA4_B5 = Get-Service | Sort-Object Status","`$cD6_E7 = Get-EventLog -LogName 'System' -Newest 1","Write-Host ('Random:' + `$pQ8_R9)","`$fG8_H9 = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('aGVsbG8='))","$iJ0_K1 = 1..5 | ForEach-Object { $_ * 2 }","$lM2_N3 = Get-Process | Where-Object { $_ -match 'idle' }","`$oP4_Q5 = 'This is a string'.Replace('string', 'sentence')","`$rS6_T7 = [enum]::GetNames([System.DayOfWeek])","`$uV8_W9 = Get-PSProvider | Format-Table -Property Name","`$xY0_Z1 = 'lowercase'.ToUpper()","`$aB2_C3 = Get-Date | Get-Member -MemberType Method","$dE4_F5 = Get-Disk | Where-Object { $_ -like '*0' }","`$gH6_I7 = 'sample string' -split ' '","`$jK8_L9 = 12.3456.ToString('N2')","`$mN0_O1 = Get-Variable | Out-Host","`$pQ2_R3 = [System.Net.Dns]::GetHostAddresses('localhost')","`$sT4_U5 = New-TimeSpan -Minutes 10","`$vW6_X7 = [System.Math]::Round(12.3456, 2)","`$yZ8_09 = Test-Path 'C:\Windows\notepad.exe'","`$b12_C3 = (Get-Service | Select-Object -First 1).ServiceName","$e45_F6 = $true -xor `$false","`$h78_I9 = [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()","`$k01_J2 = Get-Command | Group-Object -Property CommandType","`$n34_O5 = 'string'.Length","`$q67_P8 = Get-PSDrive | Sort-Object -Property Used","`$t90_U1 = Get-EventLog -LogName 'System' -InstanceId 6006 -Newest 1","`$w23_V4 = [System.Text.Encoding]::UTF8.GetBytes('hello')","`$z56_W7 = [math]::Log10(100)","`$c89_X0 = Test-Connection -ComputerName localhost -Count 1","`$f12_Y3 = Get-ChildItem 'C:\' -File","`$i45_Z6 = [System.Text.RegularExpressions.Regex]::IsMatch('test', '^[a-z]+$')","$l78_A9 = Get-Variable | Where-Object { $_ -like 'env' }","`$o01_B2 = Get-Process | Sort-Object -Property CPU -Descending","`$r34_C5 = 'test string' -match '^[a-zA-Z ]+$'","`$u67_D8 = [System.Uri]::EscapeDataString('test string')","`$x90_E1 = 'test' + ' ' + 'string'","`$a23_F4 = Get-Command | Sort-Object -Property Source","`$d56_G7 = [System.IO.Path]::GetRandomFileName()")
 
   [System.Collections.ArrayList]$scriptLines = ($script -split "\r?\n")
   $insertedIndices = @()
 
-  for ($i = 0; $i -lt $junkLevel; $i++) {
+  for ($i = 0; $i -lt $functionCount; $i++) {
     $randIndex = Get-Random -Minimum 0 -Maximum $scriptLines.Count
+    $functionName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
 
-    $randSnippet = $junkSnippets | Get-Random
+    $junkCodeArray = 1..(Get-Random -Minimum 3 -Maximum 10) | ForEach-Object {
+        Generate-RandomJunk
+    }
 
-    while ($insertedIndices -contains $randIndex) {
+    $junkCode = $junkCodeArray -join "`r`n"
+
+    $randSnippet = @"
+function $functionName {
+    $junkCode
+}
+$functionName
+"@
+
+    while (
+      ($insertedIndices -contains $randIndex) -or
+      (($randIndex -gt 0) -and ($scriptLines[$randIndex - 1] -match "(?i)(function|if|else|for|while)")) -or
+      (($randIndex -lt ($scriptLines.Count - 1)) -and ($scriptLines[$randIndex + 1] -match "^\s*\{"))
+    ) {
       $randIndex = Get-Random -Minimum 0 -Maximum $scriptLines.Count
     }
 
     $insertedIndices += $randIndex
 
     if ($randIndex -eq 0) {
-      $scriptLines.Insert(0,$randSnippet)
+      $scriptLines.Insert(0, $randSnippet)
     } else {
-      $scriptLines.Insert($randIndex,$randSnippet)
+      $scriptLines.Insert($randIndex, $randSnippet)
     }
   }
 
   return ($scriptLines -join "`r`n")
 }
+
+function Add-JunkCode {
+  param(
+    [string]$script,
+    [int]$junkLevel
+  )
+
+  [System.Collections.ArrayList]$scriptLines = ($script -split "\r?\n")
+  $insertedIndices = @()
+
+  for ($i = 0; $i -lt $junkLevel; $i++) {
+    $randIndex = Get-Random -Minimum 0 -Maximum $scriptLines.Count
+    $randSnippet = Generate-RandomJunk
+
+    # Check for sensitive code structures
+    while (
+      ($insertedIndices -contains $randIndex) -or
+      (($randIndex -gt 0) -and ($scriptLines[$randIndex - 1] -match "(?i)(function|if|else|for|while)")) -or
+      (($randIndex -lt ($scriptLines.Count - 1)) -and ($scriptLines[$randIndex + 1] -match "^\s*\{"))
+    ) {
+      $randIndex = Get-Random -Minimum 0 -Maximum $scriptLines.Count
+    }
+
+    $insertedIndices += $randIndex
+
+    if ($randIndex -eq 0) {
+      $scriptLines.Insert(0, $randSnippet)
+    } else {
+      $scriptLines.Insert($randIndex, $randSnippet)
+    }
+  }
+
+  return ($scriptLines -join "`r`n")
+}
+
 
 <#
 Minify PS1
@@ -341,17 +396,18 @@ function Minify-Script {
 
 # Obfuscate
 $obfuscatedScript = Obfuscate-Functions -Script $obfuscatedScript
-$obfuscatedScript = Obfuscate-Commands -Script $obfuscatedScript
+#$obfuscatedScript = Obfuscate-Commands -Script $obfuscatedScript
 
 # Junk it
-$obfuscatedScript = Add-RandomJunk -Script $obfuscatedScript -junkLevel 350
+#$obfuscatedScript = Add-JunkFunctions -Script $obfuscatedScript -functionCount 10
+#$obfuscatedScript = Add-JunkCode -Script $obfuscatedScript -junkLevel 100
 
 # We do this last for better results
 $obfuscatedScript = Obfuscate-StringsToBytes -Script $obfuscatedScript
 $obfuscatedScript = Obfuscate-Vars -Script $obfuscatedScript
 
 # Minify the output
-$obfuscatedScript = Minify-Script -inputData $obfuscatedScript
+#$obfuscatedScript = Minify-Script -inputData $obfuscatedScript
 
 # Step 3: Write to New File
-Set-Content -Path "C:/Users/User/Desktop/TestScript_obfuscated.ps1" -Value $obfuscatedScript
+Set-Content -Path "C://PATH//TestScript_obfuscated.ps1" -Value $obfuscatedScript
