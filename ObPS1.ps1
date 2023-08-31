@@ -1,4 +1,3 @@
-
 $obfuscatedScript = Get-Content -Path "C://PATH//test.ps1" -Raw
 
 function Obfuscate-Vars ([string]$script) {
@@ -53,18 +52,48 @@ function Obfuscate-Functions ([string]$script) {
   return $script
 }
 
-function Obfuscate-Commands ([string]$script) {
-  # Detect PowerShell commands; this pattern assumes space or end of line after the command name
-  $commandPattern = '\b([a-zA-Z0-9\-]+)\s|\b([a-zA-Z0-9\-]+)$'
-  $foundCommands = [regex]::Matches($script,$commandPattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+function Generate-ObfuscatedCommandName ([string]$commandName) {
+    $chars = $commandName.ToCharArray()
+    $obfuscatedChars = @()
+    
+    for ($i = 0; $i -lt $chars.Length; $i++) {
+        # Generate a new random number for each character
+        $random = Get-Random -Minimum 1 -Maximum 5
+        
+        if (($i + 1) % $random -eq 0) {
+            $obfuscatedChars += '?'
+        } else {
+            $obfuscatedChars += $chars[$i]
+        }
+    }
+    
+    return -join $obfuscatedChars
+}
 
-  $foundCommands | ForEach-Object {
-    $randomCommandName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-    $obfuscatedScript = $script -replace $_,$randomCommandName
-    $cmdDefinition = "`$$randomCommandName = '$_'"
-    $script = "$cmdDefinition`r`n$script"
+
+function Obfuscate-Commands ([string]$script) {
+  $functionPattern = '(?i)function ([a-zA-Z0-9_]+)'
+  $foundFunctions = [regex]::Matches($script, $functionPattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+  
+  $ast = [System.Management.Automation.Language.Parser]::ParseInput($script, [ref]$null, [ref]$null)
+  $commandNodes = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.CommandAst] }, $true)
+  
+  $actualCommands = $commandNodes | Where-Object {
+    $firstElement = $_.CommandElements[0]
+    $firstElement.Value -notin $foundFunctions
   }
 
+  foreach ($command in $actualCommands) {
+    $originalCommand = $command.Extent.Text
+    $originalCommandName = $command.GetCommandName()
+
+    $arguments = $originalCommand.Substring($command.CommandElements[0].Extent.Text.Length)
+    $obfuscatedCommandName = Generate-ObfuscatedCommandName $originalCommandName
+    
+    $newCommandWithArgs = "&(Get-Command $obfuscatedCommandName*) $arguments"
+    $script = $script -replace [regex]::Escape($command.Extent.Text), $newCommandWithArgs
+  }
+  
   return $script
 }
 
@@ -396,7 +425,7 @@ function Minify-Script {
 
 # Obfuscate
 $obfuscatedScript = Obfuscate-Functions -Script $obfuscatedScript
-#$obfuscatedScript = Obfuscate-Commands -Script $obfuscatedScript
+$obfuscatedScript = Obfuscate-Commands -Script $obfuscatedScript
 
 # Junk it
 #$obfuscatedScript = Add-JunkFunctions -Script $obfuscatedScript -functionCount 10
