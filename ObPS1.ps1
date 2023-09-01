@@ -21,32 +21,46 @@ function Obfuscate-Vars ([string]$script) {
 }
 
 function Obfuscate-StringsToBytes ([string]$script) {
-  $stringPattern = '"([^"]*)"'
+  $stringPattern = '(["''])(.*?)\1'
 
-  $obfuscatedScript = [regex]::Replace($script,$stringPattern,{
-      param($match)
-      $originalString = $match.Groups[1].Value
-      $byteString = -join ($originalString.ToCharArray() | ForEach-Object {
-          $byteVal = [byte][char]$_
-          $hexVal = "{0:X2}" -f $byteVal
-          "`$([char]([byte]0x$hexVal))"
-        })
+  $obfuscatedScript = [regex]::Replace($script, $stringPattern, {
+    param($match)
+    $quoteType = $match.Groups[1].Value
+    $originalString = $match.Groups[2].Value
 
-      "`"$byteString`""
-    })
+    $byteString = -join ($originalString.ToCharArray() | ForEach-Object {
+        $byteVal = [byte][char]$_
+        $hexVal = "{0:X2}" -f $byteVal
+        "`$([char]([byte]0x$hexVal))"
+      })
+
+    "$quoteType$byteString$quoteType"
+  })
 
   return $obfuscatedScript
 }
 
 
 function Obfuscate-Functions ([string]$script) {
-  $functionPattern = '(?i)function ([a-zA-Z0-9_]+)'
-  $foundFunctions = [regex]::Matches($script,$functionPattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+  $errors = $null
+  $tokens = $null
+  $ast = [System.Management.Automation.Language.Parser]::ParseInput($script, [ref]$tokens, [ref]$errors)
 
-  $foundFunctions | ForEach-Object {
-    $randomFunctionName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-    $script = $script -replace "function $_","function $randomFunctionName"
-    $script = $script -replace "\b$_\b",$randomFunctionName
+  $functionNodes = $ast.FindAll({
+      param($ast)
+      $ast -is [System.Management.Automation.Language.FunctionDefinitionAst]
+  }, $true)
+  
+  $nameMapping = @{}
+
+  foreach ($node in $functionNodes) {
+      $oldName = $node.Name
+      $newName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+      $nameMapping[$oldName] = $newName
+  }
+
+  foreach ($key in $nameMapping.Keys) {
+      $script = $script -replace "\b$key\b", $nameMapping[$key]
   }
 
   return $script
