@@ -4,7 +4,7 @@ function Obfuscate-Vars ([string]$script) {
   $variablePattern = '\$([a-zA-Z0-9_]+)'
   $variables = [regex]::Matches($script,$variablePattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 
-  $excludedVars = @('env', 'true', 'false')
+  $excludedVars = @('args', 'Error', 'false', 'HOME', 'Host', 'input', 'MyInvocation', 'null', 'output', 'PROFILE', 'PSBoundParameters', 'PSCmdlet', 'PSCommandPath', 'PSItem', 'PSModulePath', 'PSScriptRoot', 'PSSenderInfo', 'PSSessionApplicationName', 'PSSessionConfigurationName', 'PSSessionOption', 'PSThis', 'ShellId', 'StackTrace', 'THIS', 'true', 'VerbosePreference', 'WarningPreference', 'WhatIfPreference', '_', 'env', 'LastExitCode', 'NestedPromptLevel', 'OFS', 'PID', 'PSDebugContext', 'PSHome', 'PSParentPath', 'PSUICulture', 'PSVersionTable', 'PWD')
 
   $obfuscatedVariables = @{}
   $variables | ForEach-Object {
