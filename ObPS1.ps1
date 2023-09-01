@@ -86,26 +86,26 @@ function Generate-ObfuscatedCommandName ([string]$commandName) {
 
 
 function Obfuscate-Commands ([string]$script) {
-  $functionPattern = '(?i)function ([a-zA-Z0-9_]+)'
+  $functionPattern = '(?i)function ([a-zA-Z0-9_\-]+)'
   $foundFunctions = [regex]::Matches($script, $functionPattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-  
+
   $ast = [System.Management.Automation.Language.Parser]::ParseInput($script, [ref]$null, [ref]$null)
+
+  $allFunctions = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) | ForEach-Object { $_.Name }
   $commandNodes = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.CommandAst] }, $true)
   
   $actualCommands = $commandNodes | Where-Object {
     $firstElement = $_.CommandElements[0]
-    $firstElement.Value -notin $foundFunctions
+    $commandName = $firstElement.Value
+    
+    $commandName -notin $allFunctions -and $commandName -notin $foundFunctions
   }
 
   foreach ($command in $actualCommands) {
-    $originalCommand = $command.Extent.Text
     $originalCommandName = $command.GetCommandName()
-
-    $arguments = $originalCommand.Substring($command.CommandElements[0].Extent.Text.Length)
     $obfuscatedCommandName = Generate-ObfuscatedCommandName $originalCommandName
-    
-    $newCommandWithArgs = "&(Get-Command $obfuscatedCommandName*) $arguments"
-    $script = $script -replace [regex]::Escape($command.Extent.Text), $newCommandWithArgs
+
+    $script = $script -replace [regex]::Escape($originalCommandName), "&(Get-Command $obfuscatedCommandName*)"
   }
   
   return $script
