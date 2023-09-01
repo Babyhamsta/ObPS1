@@ -25,7 +25,6 @@ function Obfuscate-StringsToBytes ([string]$script) {
 
   $obfuscatedScript = [regex]::Replace($script, $stringPattern, {
     param($match)
-    $quoteType = $match.Groups[1].Value
     $originalString = $match.Groups[2].Value
 
     $byteString = -join ($originalString.ToCharArray() | ForEach-Object {
@@ -34,7 +33,7 @@ function Obfuscate-StringsToBytes ([string]$script) {
         "`$([char]([byte]0x$hexVal))"
       })
 
-    "$quoteType$byteString$quoteType"
+    """$byteString"""
   })
 
   return $obfuscatedScript
@@ -437,13 +436,49 @@ function Minify-Script {
   }
 }
 
+function Gzip-Script ([string]$script) {
+    $byteArray = [System.Text.Encoding]::ASCII.GetBytes($script)
+
+    $memoryStream = New-Object System.IO.MemoryStream
+    $gzipStream = New-Object System.IO.Compression.GzipStream $memoryStream, ([System.IO.Compression.CompressionMode]::Compress)
+    
+    $gzipStream.Write($byteArray, 0, $byteArray.Length)
+    $gzipStream.Close()
+
+    $compressedData = $memoryStream.ToArray()
+    $memoryStream.Close()
+
+    $base64Compressed = [System.Convert]::ToBase64String($compressedData)
+
+    # We then run our own decompression script though obfuscation for the best results and randomness
+    $DecompressScript = @"
+function Un-Gzip {
+    [System.String]`$Decoder = '`$decoded = [System.Convert]::FromBase64String(`"<Base64>`");`$ms = (New-Object System.IO.MemoryStream(`$decoded,0,`$decoded.Length)); iex(New-Object System.IO.StreamReader(New-Object System.IO.Compression.GZipStream(`$ms, [System.IO.Compression.CompressionMode]::Decompress))).readtoend()'
+    [System.String]`$Decoder = `$Decoder -replace `"<Base64>`", '$base64Compressed'
+    Invoke-Expression `$Decoder
+}
+
+Un-Gzip
+"@
+
+    $DecompressScript = Add-JunkFunctions -Script $DecompressScript -functionCount 5
+    $DecompressScript = Add-JunkCode -Script $DecompressScript -junkLevel 50
+    $DecompressScript = Obfuscate-Functions -Script $DecompressScript
+    $DecompressScript = Obfuscate-Commands -Script $DecompressScript
+    $DecompressScript = Obfuscate-StringsToBytes -Script $DecompressScript
+    $DecompressScript = Obfuscate-Vars -Script $DecompressScript
+
+    return $DecompressScript
+}
+
+
+# Junk it
+$obfuscatedScript = Add-JunkFunctions -Script $obfuscatedScript -functionCount 10
+$obfuscatedScript = Add-JunkCode -Script $obfuscatedScript -junkLevel 100
+
 # Obfuscate
 $obfuscatedScript = Obfuscate-Functions -Script $obfuscatedScript
 $obfuscatedScript = Obfuscate-Commands -Script $obfuscatedScript
-
-# Junk it
-#$obfuscatedScript = Add-JunkFunctions -Script $obfuscatedScript -functionCount 10
-#$obfuscatedScript = Add-JunkCode -Script $obfuscatedScript -junkLevel 100
 
 # We do this last for better results
 $obfuscatedScript = Obfuscate-StringsToBytes -Script $obfuscatedScript
@@ -451,6 +486,9 @@ $obfuscatedScript = Obfuscate-Vars -Script $obfuscatedScript
 
 # Minify the output
 #$obfuscatedScript = Minify-Script -inputData $obfuscatedScript
+
+# Gzip script (Should always be done last)
+$obfuscatedScript = Gzip-Script -Script $obfuscatedScript
 
 # Step 3: Write to New File
 Set-Content -Path "C://PATH//TestScript_obfuscated.ps1" -Value $obfuscatedScript
