@@ -4,18 +4,44 @@ function Obfuscate-Vars ([string]$script) {
   $variablePattern = '\$([a-zA-Z0-9_]+)'
   $variables = [regex]::Matches($script,$variablePattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 
-  $excludedVars = @('env')
+  $excludedVars = @('env', 'true', 'false')
 
   $obfuscatedVariables = @{}
   $variables | ForEach-Object {
-    if ($_ -eq '_' -or $excludedVars -contains $_) { return }
+    if ($_ -eq '_' -or $excludedVars.ToLower() -contains $_.ToLower()) { return }
 
     $randomName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
     $obfuscatedVariables["$_"] = $randomName
   }
 
+  $paramPattern = 'Param\(\s*(\[Parameter.*?\])?\s*\[\w+\]\s*\$([a-zA-Z0-9_]+)'
+  $paramMatches = [regex]::Matches($script, $paramPattern)
+  $paramMappings = @{}
+  foreach ($match in $paramMatches) {
+    $originalParam = $match.Groups[2].Value
+    if (-not $obfuscatedVariables.ContainsKey($originalParam)) {
+      $randomName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+      $paramMappings[$originalParam] = $randomName
+    } else {
+      $paramMappings[$originalParam] = $obfuscatedVariables[$originalParam]
+    }
+  }
+
+  foreach ($key in $paramMappings.Keys) {
+    $script = $script -replace ('\[' + [regex]::Escape($key) + '\]'), "[$($paramMappings[$key])]"
+  }
+
+  $functionCallPattern = '([a-zA-Z0-9_]+)\s?-\s?([a-zA-Z0-9_]+)'
+  $functionCallMatches = [regex]::Matches($script, $functionCallPattern)
+  foreach ($match in $functionCallMatches) {
+    $paramName = $match.Groups[2].Value
+    if ($paramMappings.ContainsKey($paramName)) {
+      $script = $script -replace ('-' + [regex]::Escape($paramName)), "-$($paramMappings[$paramName])"
+    }
+  }
+
   $obfuscatedVariables.GetEnumerator() | ForEach-Object {
-    $script = $script -replace ('\$' + [regex]::Escape($_.Key)),('$' + $_.Value)
+    $script = $script -replace ('\$' + [regex]::Escape($_.Key)), ('$' + $_.Value)
   }
 
   return $script
@@ -105,7 +131,7 @@ function Obfuscate-Commands ([string]$script) {
     $originalCommandName = $command.GetCommandName()
     $obfuscatedCommandName = Generate-ObfuscatedCommandName $originalCommandName
 
-    $script = $script -replace [regex]::Escape($originalCommandName), "&(Get-Command $obfuscatedCommandName*)"
+    $script = $script -replace "\b$([regex]::Escape($originalCommandName))\b", "&(Get-Command $obfuscatedCommandName*)"
   }
   
   return $script
