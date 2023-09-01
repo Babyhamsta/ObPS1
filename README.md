@@ -10,3 +10,7 @@ ObPS1 is a Powershell obfuscation script that aims to help obfuscate powershell.
 7. Minifier - This will minify the script affecting it's readability. (Currently pretty broken)
 
 This is pretty non-invasive so it should work with most scripts, currently it doesn't accept prams but I plan on making it more standardised in the future.
+
+
+Known Issues:
+1. Junk code adders don't account for multiline strings
