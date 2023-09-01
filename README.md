@@ -8,6 +8,7 @@ ObPS1 is a Powershell obfuscation script that aims to help obfuscate powershell.
 5. Junk adder - This is currently static but I hope to work to make it a dynamic junk code generator in the future, currently you can adjust how much junk code it adds to help prevent readability
 6. Junk Function adder - Generates fake functions with Junk inside of them to appear more real.
 7. Minifier - This will minify the script affecting it's readability. (Currently pretty broken)
+8. GZip Compression - This will take the whole script (including if you have already obfuscated it) and GZIP compress it into a base64 and then export it as a launcher of sorts with obfuscation as well.
 
 This is pretty non-invasive so it should work with most scripts, currently it doesn't accept prams but I plan on making it more standardised in the future.
 
