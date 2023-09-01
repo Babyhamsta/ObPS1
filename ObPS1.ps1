@@ -4,9 +4,11 @@ function Obfuscate-Vars ([string]$script) {
   $variablePattern = '\$([a-zA-Z0-9_]+)'
   $variables = [regex]::Matches($script,$variablePattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 
+  $excludedVars = @('env')
+
   $obfuscatedVariables = @{}
   $variables | ForEach-Object {
-    if ($_ -eq '_') { return }
+    if ($_ -eq '_' -or $excludedVars -contains $_) { return }
 
     $randomName = -join ((65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
     $obfuscatedVariables["$_"] = $randomName
@@ -17,7 +19,6 @@ function Obfuscate-Vars ([string]$script) {
   }
 
   return $script
-
 }
 
 function Obfuscate-StringsToBytes ([string]$script) {
