@@ -4,7 +4,7 @@ function Obfuscate-Vars ([string]$script) {
   $variablePattern = '\$([a-zA-Z0-9_]+)'
   $variables = [regex]::Matches($script,$variablePattern) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 
-  $excludedVars = @('args', 'Error', 'false', 'HOME', 'Host', 'input', 'MyInvocation', 'null', 'output', 'PROFILE', 'PSBoundParameters', 'PSCmdlet', 'PSCommandPath', 'PSItem', 'PSModulePath', 'PSScriptRoot', 'PSSenderInfo', 'PSSessionApplicationName', 'PSSessionConfigurationName', 'PSSessionOption', 'PSThis', 'ShellId', 'StackTrace', 'THIS', 'true', 'VerbosePreference', 'WarningPreference', 'WhatIfPreference', '_', 'env', 'LastExitCode', 'NestedPromptLevel', 'OFS', 'PID', 'PSDebugContext', 'PSHome', 'PSParentPath', 'PSUICulture', 'PSVersionTable', 'PWD')
+  $excludedVars = @('args', 'error', 'env', 'true' 'false', 'home', 'host', 'input', 'myinvocation', 'null', 'output', 'profile', 'psboundparameters', 'pscmdlet', 'pscommandpath', 'psitem', 'psmodulepath', 'psscriptroot', 'pssenderinfo', 'pssessionapplicationname', 'pssessionconfigurationname', 'pssessionoption', 'psthis', 'shellid', 'stacktrace', 'this', 'true', 'verbosepreference', 'warningpreference', 'whatifpreference', '_', 'env', 'lastexitcode', 'nestedpromptlevel', 'ofs', 'pid', 'psdebugcontext', 'pshome', 'psparentpath', 'psuiculture', 'psversiontable', 'pwd')
 
   $obfuscatedVariables = @{}
   $variables | ForEach-Object {
